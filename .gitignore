@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node
+node_modules/
+
+# Env
+.env
+
+# Databases
+*.db
+
+# Vector DB
+chroma/
+
+# MLflow
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
