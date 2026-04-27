@@ -1,12 +1,18 @@
 # ADR 002: Chunking Strategy
 
 ## Context
-Need vector database for embeddings.
+Chunking affects retrieval quality.
 
 ## Decision
-Use pgvector.
+Use semantic chunking primarily.
+
+## Alternatives
+- Fixed-size (fast but less accurate)
+- Sentence-boundary (moderate)
 
 ## Consequences
-+ Easy integration with Postgres
-+ Open source
-- Less scalable than Pinecone
++ Better context understanding
++ Higher retrieval accuracy
+- Slightly slower
+
+Switch to fixed-size if performance issues arise.

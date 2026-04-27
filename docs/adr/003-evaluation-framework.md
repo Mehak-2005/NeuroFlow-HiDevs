@@ -1,12 +1,19 @@
 # ADR 003: Evaluation Framework
 
 ## Context
-Need vector database for embeddings.
+Need scalable evaluation system.
 
 ## Decision
-Use pgvector.
+Use LLM-as-judge.
+
+## Alternatives
+- Human evaluation (slow, costly)
 
 ## Consequences
-+ Easy integration with Postgres
-+ Open source
-- Less scalable than Pinecone
++ Scalable and automated
++ Fast feedback loop
+- Can be biased or inaccurate
+
+Mitigation:
+- Periodic human validation
+- Threshold-based filtering
