@@ -1,19 +1,39 @@
-# NeuroFlow-HiDevs
+# Task 1 — System Architecture & API Setup
 
-Advanced RAG + Evaluation + Fine-Tuning System
+## 📌 Overview
 
-## Modules
-- Ingestion
-- Retrieval
-- Generation
-- Evaluation
-- Fine-Tuning
+This task establishes the foundational backend architecture using FastAPI.
 
-## Structure
-backend/ - APIs  
-frontend/ - UI  
-pipelines/ - orchestration  
-evaluation/ - scoring  
-infra/ - deployment  
+## ✅ Features
 
-docs/ - architecture & design
+* FastAPI app initialized
+* Basic routing setup
+* Health/root endpoint created
+* Clean project structure
+
+## 🚀 Run
+
+```bash
+uvicorn main:app --reload
+```
+
+## 🔍 Test
+
+Open:
+
+```
+http://127.0.0.1:8000/
+```
+
+## ✅ Output
+
+```json
+{
+  "message": "API working"
+}
+```
+
+## 🧠 Tech
+
+* FastAPI
+* Python Async
