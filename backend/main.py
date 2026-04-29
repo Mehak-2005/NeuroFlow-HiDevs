@@ -1,29 +1,43 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import asyncpg
 import redis.asyncio as redis
 import httpx
+
 from api.ingest import router as ingest_router
+from api.query import router as query_router
 
-# ✅ TEMP settings (since config not used)
-POSTGRES_URL = "postgresql://neuroflow:postgres123@localhost:5432/neuroflow"
-REDIS_URL = "redis://:redis123@localhost:6379"
-MLFLOW_URL = "http://localhost:5000"
+from config import settings   # make sure config.py exists
 
-# Global connections
+# ---------------- APP INIT ---------------- #
+
+app = FastAPI()
+
+# include routers AFTER app is created
+app.include_router(ingest_router)
+app.include_router(query_router)
+
+# ---------------- GLOBAL CONNECTIONS ---------------- #
+
 pg_pool = None
 redis_client = None
 
+
+# ---------------- LIFESPAN ---------------- #
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pg_pool, redis_client
 
-    # Connect Postgres
-    pg_pool = await asyncpg.create_pool(POSTGRES_URL)
+    # Postgres
+    pg_pool = await asyncpg.create_pool(settings.postgres_url)
 
-    # Connect Redis
-    redis_client = redis.from_url(REDIS_URL)
+    # Redis
+    redis_client = redis.from_url(settings.redis_url)
 
     yield
 
@@ -32,11 +46,7 @@ async def lifespan(app: FastAPI):
     await redis_client.close()
 
 
-# ✅ CREATE app FIRST
-app = FastAPI(lifespan=lifespan)
-
-# ✅ THEN include router
-app.include_router(ingest_router)
+app.router.lifespan_context = lifespan
 
 
 # ---------------- HEALTH CHECK ---------------- #
@@ -61,15 +71,15 @@ async def check_redis():
 async def check_mlflow():
     try:
         async with httpx.AsyncClient() as client:
-            res = await client.get(MLFLOW_URL)
+            res = await client.get(settings.MLFLOW_URL)
             return res.status_code == 200
     except:
         return False
 
 
 @app.get("/")
-def root():
-    return {"message": "API working"}
+async def root():
+    return {"message": "NeuroFlow API working 🚀"}
 
 
 @app.get("/health")
