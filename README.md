@@ -1,19 +1,51 @@
-# NeuroFlow-HiDevs
+# Task 2 — Infrastructure Foundation
 
-Advanced RAG + Evaluation + Fine-Tuning System
+## 📌 Overview
 
-## Modules
-- Ingestion
-- Retrieval
-- Generation
-- Evaluation
-- Fine-Tuning
+Set up production infrastructure using Docker.
 
-## Structure
-backend/ - APIs  
-frontend/ - UI  
-pipelines/ - orchestration  
-evaluation/ - scoring  
-infra/ - deployment  
+## ✅ Services
 
-docs/ - architecture & design
+* PostgreSQL (pgvector)
+* Redis
+* MLflow
+* Jaeger
+
+## 🚀 Start
+
+```bash
+cd infra
+docker compose up -d
+```
+
+## 🔍 Check
+
+```bash
+docker ps
+```
+
+## 🔍 Health API
+
+```
+http://127.0.0.1:8000/health
+```
+
+## ✅ Output
+
+```json
+{
+  "status": "ok",
+  "checks": {
+    "postgres": true,
+    "redis": true,
+    "mlflow": true
+  }
+}
+```
+
+## 🧠 Tech
+
+* Docker
+* PostgreSQL
+* Redis
+* MLflow
