@@ -1,228 +1,143 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# 📊 Task 7 — Automated Evaluation Framework (LLM-as-Judge with RAGAS Metrics)
 
 ## 🚀 Overview
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+This module implements an automated evaluation framework for RAG (Retrieval-Augmented Generation) outputs using an LLM-as-Judge approach inspired by **RAGAS metrics**.
+
+Each generated response is evaluated across multiple dimensions to ensure quality, correctness, and relevance.
 
 ---
 
-## 🧩 Features Implemented
+## 🧠 Implemented Metrics
 
-### 1. Prompt Assembly
+### 1. Faithfulness
 
-* Dynamic prompt building based on query type:
+Measures whether the generated answer is grounded in the retrieved context.
 
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
+* Score: `supported_claims / total_claims`
+* Returns `0.0 – 1.0`
 
 ---
 
-### 2. Streaming Generation (SSE)
+### 2. Answer Relevance
 
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
+Checks if the answer actually addresses the user’s query.
 
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
+* Based on semantic similarity (simplified version)
+* Returns `0.0 – 1.0`
 
 ---
 
-### 3. SSE Events Flow
+### 3. Context Precision
 
-Example stream:
+Evaluates how useful the retrieved chunks were.
 
-```
-data: {"type": "retrieval_start"}
-
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
-
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
-
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
+* Measures proportion of useful chunks
+* Returns `0.0 – 1.0`
 
 ---
 
-### 4. Citation Tracking
+### 4. Context Recall
 
-* Extracts `[Source N]` from response
-* Maps to:
+Checks whether all relevant information was retrieved.
 
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
+* Based on sentence attribution
+* Returns `0.0 – 1.0`
 
 ---
 
-### 5. API Endpoints
+## ⚙️ Evaluation Judge
 
-#### ➤ POST `/query`
+The `EvaluationJudge` class:
 
-Request:
+* Runs all 4 metrics **in parallel** using `asyncio.gather`
+* Computes overall score:
 
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
+```python
+overall_score = (
+    0.35 * faithfulness +
+    0.30 * answer_relevance +
+    0.20 * context_precision +
+    0.15 * context_recall
+)
 ```
 
-Response:
+---
 
-* Returns `run_id`
+## 📂 Project Structure
+
+```
+evaluation/
+├── __init__.py
+├── judge.py
+├── metrics/
+│   ├── __init__.py
+│   ├── faithfulness.py
+│   ├── answer_relevance.py
+│   ├── context_precision.py
+│   └── context_recall.py
+├── calibration/
+│   ├── annotated_set.json
+│   └── calibration_results.json
+```
 
 ---
 
-#### ➤ GET `/query/{run_id}/stream`
+## ▶️ Running the Test
 
-* Streams response using SSE
-
-Test:
+From project root:
 
 ```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+python backend/test_judge.py
 ```
 
 ---
 
-### 6. Health Check
+## ✅ Sample Output
 
-```bash
-GET /health
 ```
+Faithfulness: 1.0
+Answer Relevance: 0.9
+Context Precision: 1.0
+Context Recall: 1.0
 
-Example:
-
-```json
+FINAL RESULT:
 {
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
-  }
+  "faithfulness": 1.0,
+  "answer_relevance": 0.9,
+  "context_precision": 1.0,
+  "context_recall": 1.0,
+  "overall_score": 0.97
 }
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## 🔧 Notes
 
-```bash
-git checkout task-35
-git checkout -b task-36
+* Current implementation uses **mock logic** for metrics (baseline setup)
+* Designed to be extended with:
 
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
-```
+  * LLM-based claim verification
+  * Embedding-based similarity
+  * Calibration using human-labeled dataset
 
 ---
 
-## ▶️ Run the Project
+## 🎯 Next Steps
 
-### Start Docker services:
-
-```bash
-cd infra
-docker compose up -d
-```
-
-### Run backend:
-
-```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
-```
+* Replace mock logic with real LLM calls
+* Implement embeddings for semantic similarity
+* Compute Pearson correlation for calibration (>0.85 target)
+* Integrate with training pipeline (Task 39)
 
 ---
 
-## 🧪 Testing Streaming
+## 🏁 Status
 
-Open browser:
-
-```
-http://127.0.0.1:8000/query/abc-123/stream
-```
-
-OR:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
-
----
-
-## 📁 Folder Structure
-
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
-```
-
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
-
----
-
-## 🎯 Output Example
-
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
-```
-
-With structured citations:
-
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
-```
-
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
+✅ Metric structure implemented
+✅ Async evaluation pipeline working
+✅ End-to-end test successful
+🚧 Advanced evaluation logic pending
 
 ---
