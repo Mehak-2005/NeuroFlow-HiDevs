@@ -4,7 +4,16 @@ import json
 
 from pipelines.generation.generator import mock_stream
 
+from fastapi import APIRouter
+
 router = APIRouter()
+
+ratings = {}
+
+@router.patch("/runs/{run_id}/rating")
+async def rate_run(run_id: str, body: dict):
+    ratings[run_id] = body["rating"]
+    return {"status": "saved", "run_id": run_id}
 
 
 @router.get("/query/{run_id}/stream")
