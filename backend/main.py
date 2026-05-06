@@ -12,6 +12,12 @@ from api.ingest import router as ingest_router
 from api.query import router as query_router
 
 from config import settings   # make sure config.py exists
+from backend.api.compare import router as compare_router
+
+from api.compare import router as compare_router
+from api.pipelines import router as pipeline_router
+
+
 
 # ---------------- APP INIT ---------------- #
 
@@ -20,6 +26,8 @@ app = FastAPI()
 # include routers AFTER app is created
 app.include_router(ingest_router)
 app.include_router(query_router)
+app.include_router(compare_router)
+app.include_router(pipeline_router)
 
 # ---------------- GLOBAL CONNECTIONS ---------------- #
 
