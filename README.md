@@ -1,228 +1,407 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
-
-## 🚀 Overview
-
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+# 🚀 NeuroFlow — Task 8  
+# Named Pipeline System — Config-Driven RAG with A/B Comparison
 
 ---
 
-## 🧩 Features Implemented
+# 📌 Overview
 
-### 1. Prompt Assembly
+This task implements a configurable Named Pipeline System for NeuroFlow.  
+The system allows different Retrieval-Augmented Generation (RAG) pipelines to be defined using structured JSON configurations instead of hardcoded logic.
 
-* Dynamic prompt building based on query type:
+The implementation supports:
 
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
+- Named pipeline configurations
+- Strict schema validation using Pydantic
+- Pipeline versioning
+- Parallel A/B pipeline comparison
+- Pipeline analytics
+- Pipeline run history
+- Evaluation score tracking
+- Async execution using `asyncio.gather`
 
-  * No hallucination
-  * Mandatory citations `[Source N]`
-
----
-
-### 2. Streaming Generation (SSE)
-
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
-
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
+This enables multiple RAG strategies to be tested and compared without changing application code.
 
 ---
 
-### 3. SSE Events Flow
+# 🎯 Objectives Achieved
 
-Example stream:
-
-```
-data: {"type": "retrieval_start"}
-
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
-
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
-
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
+✅ Config-driven pipeline architecture  
+✅ Strict validation with Pydantic  
+✅ Named and versioned pipelines  
+✅ A/B comparison endpoint  
+✅ Parallel pipeline execution  
+✅ Pipeline analytics endpoint  
+✅ Pipeline run history endpoint  
+✅ Evaluation score integration  
+✅ Async processing using FastAPI + asyncio  
 
 ---
 
-### 4. Citation Tracking
+# 🏗 Project Structure
 
-* Extracts `[Source N]` from response
-* Maps to:
-
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
-
----
-
-### 5. API Endpoints
-
-#### ➤ POST `/query`
-
-Request:
-
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
-```
-
-Response:
-
-* Returns `run_id`
-
----
-
-#### ➤ GET `/query/{run_id}/stream`
-
-* Streams response using SSE
-
-Test:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+```text
+backend/
+│
+├── api/
+│   ├── compare.py
+│   ├── pipelines.py
+│
+├── models/
+│   ├── __init__.py
+│   ├── pipeline.py
+│
+├── main.py
 ```
 
 ---
 
-### 6. Health Check
+# ⚙️ Pipeline Configuration Schema
 
-```bash
-GET /health
+Implemented using Pydantic models in:
+
+```text
+backend/models/pipeline.py
 ```
+
+The schema supports four major sections:
+
+## 1️⃣ Ingestion Configuration
+
+Controls:
+- chunking strategy
+- chunk size
+- overlap
+- extractor configuration
 
 Example:
 
 ```json
 {
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
+  "chunking_strategy": "hierarchical",
+  "chunk_size_tokens": 400,
+  "chunk_overlap_tokens": 80,
+  "extractors_enabled": ["pdf", "docx"]
+}
+```
+
+---
+
+## 2️⃣ Retrieval Configuration
+
+Controls:
+- dense retrieval
+- sparse retrieval
+- reranking
+- metadata filtering
+- query expansion
+
+Example:
+
+```json
+{
+  "dense_k": 30,
+  "sparse_k": 20,
+  "reranker": "cross-encoder",
+  "top_k_after_rerank": 8,
+  "query_expansion": true,
+  "metadata_filters_enabled": true
+}
+```
+
+---
+
+## 3️⃣ Generation Configuration
+
+Controls:
+- model routing
+- context window
+- temperature
+- prompt style
+
+Example:
+
+```json
+{
+  "max_context_tokens": 6000,
+  "temperature": 0.2,
+  "system_prompt_variant": "precise"
+}
+```
+
+---
+
+## 4️⃣ Evaluation Configuration
+
+Controls:
+- automatic evaluation
+- training thresholds
+
+Example:
+
+```json
+{
+  "auto_evaluate": true,
+  "training_threshold": 0.82
+}
+```
+
+---
+
+# 🔒 Strict Validation
+
+The pipeline schema rejects unknown keys using:
+
+```python
+ConfigDict(extra="forbid")
+```
+
+This guarantees:
+- schema consistency
+- safer pipeline configuration
+- prevention of invalid configuration injection
+
+---
+
+# 🔀 A/B Pipeline Comparison
+
+Implemented endpoint:
+
+```text
+POST /pipelines/compare
+```
+
+This endpoint:
+- accepts a query
+- runs two pipelines simultaneously
+- compares outputs side-by-side
+
+---
+
+# ⚡ Parallel Execution
+
+Pipelines are executed concurrently using:
+
+```python
+asyncio.gather()
+```
+
+This reduces overall latency and ensures:
+- faster response time
+- efficient async execution
+- real-time comparison capability
+
+---
+
+# 📊 Response Format
+
+The compare endpoint returns:
+
+```json
+{
+  "query": "What is AI?",
+  "pipeline_a": {
+    "run_id": "uuid",
+    "generation": "response",
+    "retrieval_latency_ms": 505,
+    "total_latency_ms": 1510,
+    "chunks_used": 5,
+    "eval_score": 0.85
+  },
+  "pipeline_b": {
+    "run_id": "uuid",
+    "generation": "response",
+    "retrieval_latency_ms": 510,
+    "total_latency_ms": 1520,
+    "chunks_used": 5,
+    "eval_score": 0.80
   }
 }
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+# 📈 Analytics Endpoint
 
-```bash
-git checkout task-35
-git checkout -b task-36
+Implemented:
 
-cd backend
-source venv/Scripts/activate   # Windows
+```text
+GET /pipelines/{id}/analytics
+```
 
-pip install sse-starlette
-pip freeze > requirements.txt
+Provides:
+- p50 latency
+- p95 latency
+- p99 latency
+- average evaluation score
+- query trends
+- estimated cost per query
+
+Example response:
+
+```json
+{
+  "latency": {
+    "p50": 1200,
+    "p95": 1800,
+    "p99": 2200
+  },
+  "avg_eval_score": 0.85,
+  "cost_per_query": 0.002
+}
 ```
 
 ---
 
-## ▶️ Run the Project
+# 📜 Pipeline Run History
 
-### Start Docker services:
+Implemented:
+
+```text
+GET /pipelines/{id}/runs
+```
+
+Tracks:
+- run IDs
+- latency
+- evaluation scores
+- pipeline executions
+
+---
+
+# 🧠 Evaluation Trigger
+
+After comparison execution:
+- asynchronous evaluation jobs are triggered
+- evaluation scores are generated
+- pipeline quality metrics are updated
+
+---
+
+# 🛠 Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| FastAPI | Backend API framework |
+| asyncio | Parallel execution |
+| Pydantic | Schema validation |
+| Docker | Containerization |
+| PostgreSQL | Data storage |
+| Redis | Caching |
+| Uvicorn | ASGI server |
+
+---
+
+# ▶️ Run Instructions
+
+## 1️⃣ Start Docker Services
 
 ```bash
 cd infra
 docker compose up -d
 ```
 
-### Run backend:
+---
+
+## 2️⃣ Verify Running Containers
 
 ```bash
-cd ../backend
-set PYTHONPATH=..
+docker ps
+```
+
+Expected containers:
+
+- infra-postgres-1
+- infra-redis-1
+- infra-mlflow-1
+- infra-jaeger-1
+
+---
+
+## 3️⃣ Start Backend Server
+
+```bash
+cd backend
+source venv/Scripts/activate
 uvicorn main:app --reload
 ```
 
 ---
 
-## 🧪 Testing Streaming
+# 🌐 API Documentation
 
-Open browser:
+Open Swagger UI:
 
-```
-http://127.0.0.1:8000/query/abc-123/stream
-```
-
-OR:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+```text
+http://127.0.0.1:8000/docs
 ```
 
 ---
 
-## 📁 Folder Structure
+# 🧪 Testing
 
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
+## Test A/B Comparison
 
-backend/
-  api/
-    query.py
+Endpoint:
+
+```text
+POST /pipelines/compare
 ```
 
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
-
----
-
-## 🎯 Output Example
-
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
-```
-
-With structured citations:
+Request:
 
 ```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
+{
+  "query": "What is AI?"
+}
 ```
 
 ---
 
-## 📌 Conclusion
+## Test Analytics
 
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
+```text
+GET /pipelines/test/analytics
+```
 
 ---
+
+## Test Runs History
+
+```text
+GET /pipelines/test/runs
+```
+
+---
+
+# ✅ Expected Results
+
+- Successful parallel pipeline execution
+- Structured comparison output
+- Evaluation scores generated
+- Analytics metrics returned
+- Run history tracked correctly
+
+---
+
+# 📂 Files Added
+
+```text
+backend/api/compare.py
+backend/api/pipelines.py
+backend/models/__init__.py
+backend/models/pipeline.py
+```
+
+---
+
+# 🚀 Final Outcome
+
+Task 8 successfully implements a scalable and configurable Named Pipeline System for NeuroFlow with:
+
+- strict schema validation
+- async A/B comparison
+- analytics support
+- version-ready pipeline architecture
+- evaluation integration
+
+This creates the foundation for advanced experimentation and production-grade RAG pipeline management.
