@@ -1,228 +1,238 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# 🛡️ Task 10 — Production Async Resilience
+## Circuit Breakers, Rate Limiting & Backpressure
 
-## 🚀 Overview
-
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+This task implements a production-grade resilience layer for NeuroFlow to handle provider failures, API rate limits, queue overload, and timeout management in distributed async environments.
 
 ---
 
-## 🧩 Features Implemented
+# 🚀 Features Implemented
 
-### 1. Prompt Assembly
+## ✅ Circuit Breaker System
 
-* Dynamic prompt building based on query type:
+Implemented Redis-backed circuit breakers for all external provider calls.
 
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
+### Supported States
+- CLOSED → normal operation
+- OPEN → requests blocked after repeated failures
+- HALF_OPEN → recovery testing state
 
-  * No hallucination
-  * Mandatory citations `[Source N]`
+### Features
+- Failure threshold tracking
+- Automatic recovery timeout
+- Shared Redis state across workers
+- Prevents cascading provider failures
 
----
-
-### 2. Streaming Generation (SSE)
-
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
-
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
-
----
-
-### 3. SSE Events Flow
-
-Example stream:
-
+### File
+```text
+backend/resilience/circuit_breaker.py
 ```
-data: {"type": "retrieval_start"}
+### ✅ Rate Limiting
 
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
+Implemented token-bucket rate limiting using Redis.
 
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
+Global Provider Limits
 
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
-
----
-
-### 4. Citation Tracking
-
-* Extracts `[Source N]` from response
-* Maps to:
-
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
-
----
-
-### 5. API Endpoints
-
-#### ➤ POST `/query`
-
-Request:
-
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
-```
-
-Response:
-
-* Returns `run_id`
-
----
-
-#### ➤ GET `/query/{run_id}/stream`
-
-* Streams response using SSE
-
-Test:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
-
----
-
-### 6. Health Check
-
-```bash
-GET /health
-```
+Supports provider-wide RPM control.
 
 Example:
+```
+OpenAI → 3000 RPM
+Per-Pipeline Limits
+```
+Each pipeline can define:
+```
+"rate_limit_rpm": 60
+```
+API Endpoint Limits
 
-```json
+Endpoint	Limit
+
+/ingest	10 requests/hour/IP
+/query	60 requests/minute/IP
+File
+```
+backend/resilience/rate_limiter.py
+```
+
+### ✅ Backpressure Protection
+
+Protects ingestion workers from queue overload.
+
+Queue Depth Rules
+Queue Depth	Behavior
+< 50	Normal
+> 50	Warning response
+> 100	503 Service Unavailable
+
+Example Response
+```
+{
+  "error": "ingestion_queue_full",
+  "queue_depth": 120,
+  "retry_after": 30
+}
+```
+File
+```
+backend/resilience/backpressure.py
+
+```
+
+### ✅ Timeout Management
+
+Added centralized timeout handling for all async provider calls.
+
+Supported Timeout Types
+Task Type	Timeout
+Embedding	10s
+Chat Completion	60s
+Reranking	15s
+Evaluation	120s
+File Extraction	30s
+URL Fetch	15s
+
+Features
+Uses asyncio.wait_for
+Timeout tracking in Redis
+Proper async exception propagation
+
+
+File
+
+```
+backend/resilience/timeout_manager.py
+```
+
+### ✅ Enhanced Health Monitoring
+
+Improved /health endpoint with resilience diagnostics.
+
+Includes
+PostgreSQL health
+Redis health
+MLflow health
+Circuit breaker states
+Queue depth
+Worker count
+
+Example Response
+
+```
 {
   "status": "ok",
   "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
+    "postgres": {
+      "status": "ok",
+      "latency_ms": 3
+    },
+    "redis": {
+      "status": "ok",
+      "latency_ms": 1
+    },
+    "mlflow": {
+      "status": "ok",
+      "latency_ms": 45
+    },
+    "circuit_breakers": {
+      "openai": {
+        "state": "closed",
+        "failure_count": 0
+      }
+    },
+    "queue_depth": 23,
+    "worker_count": 2
   }
 }
 ```
+### ✅ Circuit Breaker Testing
 
----
+Implemented unit testing for failure recovery.
 
-## ⚙️ Setup Instructions
+Test Case
+5 consecutive failures trigger OPEN state
+6th call raises CircuitOpenError
 
-```bash
-git checkout task-35
-git checkout -b task-36
-
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
+File
 ```
+backend/test_circuit_breaker.py
+```
+### 📂 Project Structure
 
----
+backend/
+│
+├── resilience/
+│   ├── __init__.py
+│   ├── circuit_breaker.py
+│   ├── rate_limiter.py
+│   ├── backpressure.py
+│   └── timeout_manager.py
+│
+├── test_circuit_breaker.py
+└── main.py
 
-## ▶️ Run the Project
+### ⚙️ Technologies Used
+FastAPI
+Redis
+AsyncIO
+Docker
+PostgreSQL
+MLflow
+Uvicorn
 
-### Start Docker services:
+### ▶️ Running the Project
 
-```bash
+Start Infrastructure
+```
 cd infra
 docker compose up -d
 ```
-
-### Run backend:
-
-```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
+Activate Backend
 ```
-
----
-
-## 🧪 Testing Streaming
-
-Open browser:
-
+cd backend
+source venv/Scripts/activate
 ```
-http://127.0.0.1:8000/query/abc-123/stream
+Run FastAPI Server
 ```
-
-OR:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+python -m uvicorn main:app --reload
 ```
-
----
-
-## 📁 Folder Structure
-
+### 🧪 Run Circuit Breaker Test
 ```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
+python test_circuit_breaker.py
 ```
-
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
-
----
-
-## 🎯 Output Example
-
+Expected Output
 ```
-Artificial intelligence is the simulation of human intelligence [Source 1]
+Failure 1
+Failure 2
+Failure 3
+Failure 4
+Failure 5
+CircuitOpenError triggered successfully
 ```
+### 🌐 API Endpoints
+Endpoint	Method	Description
 
-With structured citations:
+/health	GET	Resilience system health
+/query	POST	Rate-limited query endpoint
+/ingest	POST	Queue-protected ingestion
 
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
+### ✅ Task Completion Checklist
+
+ Circuit breaker opens after 5 failures
+ Redis-backed shared state
+ Token bucket rate limiting
+ Per-pipeline RPM control
+ API endpoint rate limiting
+ Queue backpressure protection
+ Timeout management
+ Enhanced /health endpoint
+ Circuit breaker unit test
+ GitHub branch pushed successfully
+
+ ### 📌 Branch
+ ```
+task-10
 ```
+### 👩‍💻 Author
 
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
-
----
+Mehak-2005
+NeuroFlow-HiDevs Project 🚀
