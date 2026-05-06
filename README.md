@@ -1,112 +1,256 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# 🚀 Task 9 — Fine-Tuning Pipeline with MLflow Tracking & Model Registration
 
-## 🚀 Overview
+# 🚀 NeuroFlow — Advanced RAG System
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+## 📌 Project Overview
 
----
+NeuroFlow is an advanced Retrieval-Augmented Generation (RAG) platform designed to support intelligent document ingestion, retrieval, generation, evaluation, and continuous fine-tuning workflows.
 
-## 🧩 Features Implemented
+The system is built using:
+- FastAPI
+- PostgreSQL
+- Redis
+- MLflow
+- Docker
+- Async Python pipelines
 
-### 1. Prompt Assembly
+NeuroFlow supports:
+- multi-modal document ingestion
+- hybrid retrieval pipelines
+- streaming RAG generation
+- automated evaluation
+- configurable named pipelines
+- fine-tuning workflows
 
-* Dynamic prompt building based on query type:
-
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
-
----
-
-### 2. Streaming Generation (SSE)
-
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
-
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
+The platform is designed for scalable AI systems that continuously improve through evaluation-driven learning.
 
 ---
 
-### 3. SSE Events Flow
+# 🧠 System Architecture
 
-Example stream:
+```text
+Document Upload
+      ↓
+Ingestion Pipeline
+      ↓
+Chunking & Embeddings
+      ↓
+Hybrid Retrieval
+      ↓
+RAG Generation
+      ↓
+Evaluation Framework
+      ↓
+Training Pair Extraction
+      ↓
+Fine-Tuning Pipeline
+      ↓
+Improved Models
 
 ```
-data: {"type": "retrieval_start"}
+# Project Structure 
 
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
+NeuroFlow-HiDevs/
+│
+├── backend/
+│   ├── api/
+│   │   ├── ingest.py
+│   │   ├── query.py
+│   │   ├── compare.py
+│   │   ├── pipelines.py
+│   │   └── finetune.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── pipeline.py
+│   │
+│   ├── config.py
+│   ├── main.py
+│   └── requirements.txt
+│
+├── pipelines/
+│   ├── ingestion/
+│   ├── retrieval/
+│   ├── generation/
+│   └── finetuning/
+│
+├── evaluation/
+│   ├── metrics/
+│   ├── calibration/
+│   └── judge.py
+│
+├── training_data/
+│
+├── infra/
+│   └── docker-compose.yml
+│
+└── README.md
 
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
+---
+# Features Implemented
+🔹 Task 9 — Fine-Tuning Pipeline
 
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
+Implemented:
+
+training pair extraction
+JSONL dataset generation
+MLflow experiment tracking
+fine-tuning job management
+artifact logging
+
+Validation includes:
+
+citation enforcement
+PII filtering
+quality threshold filtering
+token length validation
+---
+
+# ⚙️ Technologies Used 
+
+Backend
+FastAPI
+Python
+asyncio
+Databases
+PostgreSQL
+Redis
+ML & AI
+sentence-transformers
+MLflow
+RAG pipelines
+Infrastructure
+Docker
+Docker Compose
+Evaluation
+RAGAS-inspired metrics
+cosine similarity
+Pearson correlation
 
 ---
 
-### 4. Citation Tracking
+# ▶️ Setup Instructions
 
-* Extracts `[Source N]` from response
-* Maps to:
+1️⃣ Clone Repository
+git clone <repo-url>
+cd NeuroFlow-HiDevs
 
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
+2️⃣ Start Infrastructure
+cd infra
+docker compose up -d
+
+This starts:
+
+PostgreSQL
+Redis
+MLflow
+Jaeger
+
+3️⃣ Activate Backend Environment
+cd ../backend
+source venv/Scripts/activate
+4️⃣ Install Dependencies
+pip install -r requirements.txt
+
+5️⃣ Run Backend
+uvicorn main:app --reload
 
 ---
+# 🌐 API Documentation
 
-### 5. API Endpoints
+Open Swagger UI:
 
-#### ➤ POST `/query`
+http://127.0.0.1:8000/docs
+🔌 Main API Endpoints
+Ingestion
+POST /ingest
 
-Request:
+Uploads and processes documents.
 
-```json
+Query Generation
+POST /query
+
+Runs RAG generation.
+
+Streaming Endpoint
+GET /query/{run_id}/stream
+
+Streams tokens using SSE.
+
+Pipeline Comparison
+POST /pipelines/compare
+
+Runs A/B pipeline comparison.
+
+Pipeline Analytics
+GET /pipelines/{id}/analytics
+
+Returns:
+
+p50 latency
+p95 latency
+p99 latency
+average evaluation score
+Pipeline Runs
+GET /pipelines/{id}/runs
+
+Returns pipeline run history.
+
+Fine-Tuning
+POST /finetune
+
+Starts fine-tuning job.
+
+---
+# 📄 Example Pipeline Compare Request
+{
+  "query": "What is AI?"
+}
+
+📄 Example Compare Output
 {
   "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
+  "pipeline_a": {
+    "run_id": "123",
+    "generation": "[A] Answer for: What is AI?",
+    "retrieval_latency_ms": 500,
+    "total_latency_ms": 1500,
+    "chunks_used": 5,
+    "eval_score": 0.85
+  },
+  "pipeline_b": {
+    "run_id": "456",
+    "generation": "[B] Answer for: What is AI?",
+    "retrieval_latency_ms": 500,
+    "total_latency_ms": 1500,
+    "chunks_used": 5,
+    "eval_score": 0.80
+  }
 }
-```
 
-Response:
+📊 MLflow Tracking
 
-* Returns `run_id`
+Open MLflow dashboard:
 
----
+http://localhost:5000
 
-#### ➤ GET `/query/{run_id}/stream`
+Tracks:
 
-* Streams response using SSE
+experiments
+metrics
+artifacts
+training datasets
+fine-tuning runs
 
-Test:
+🧪 Testing
+Test Streaming
+curl -N http://127.0.0.1:8000/query/{run_id}/stream
 
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
-
----
-
-### 6. Health Check
-
-```bash
+Test Health Endpoint
 GET /health
-```
 
-Example:
+Expected:
 
-```json
 {
   "status": "ok",
   "checks": {
@@ -115,114 +259,95 @@ Example:
     "mlflow": true
   }
 }
-```
+---
+# 📊 Evaluation Metrics
+
+Implemented metrics:
+
+Faithfulness
+Answer Relevance
+Context Precision
+Context Recall
+
+Overall score formula:
+
+overall_score = (
+    0.35 * faithfulness +
+    0.30 * answer_relevance +
+    0.20 * context_precision +
+    0.15 * context_recall
+)
+
+📦 Fine-Tuning Dataset Format
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise research assistant..."
+    },
+    {
+      "role": "user",
+      "content": "[Question] What is AI?"
+    },
+    {
+      "role": "assistant",
+      "content": "AI is the simulation of human intelligence. [Source 1]"
+    }
+  ]
+}
 
 ---
+# 🔥 Key Highlights
 
-## ⚙️ Setup Instructions
-
-```bash
-git checkout task-35
-git checkout -b task-36
-
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
-```
-
----
-
-## ▶️ Run the Project
-
-### Start Docker services:
-
-```bash
-cd infra
-docker compose up -d
-```
-
-### Run backend:
-
-```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
-```
+✅ Multi-modal ingestion
+✅ Hybrid retrieval system
+✅ Streaming RAG generation
+✅ Citation tracking
+✅ Automated evaluation
+✅ Named configurable pipelines
+✅ Pipeline A/B comparison
+✅ Fine-tuning workflow
+✅ MLflow experiment tracking
+✅ Dockerized infrastructure
 
 ---
+#🎯 Learning Outcomes
 
-## 🧪 Testing Streaming
+This project demonstrates:
 
-Open browser:
-
-```
-http://127.0.0.1:8000/query/abc-123/stream
-```
-
-OR:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
+scalable RAG architecture
+async backend systems
+evaluation-driven AI pipelines
+experiment tracking
+retrieval optimization
+streaming APIs
+continuous model improvement
 
 ---
-
-## 📁 Folder Structure
-
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
-```
+# 🛠 Future Improvements
+Real LLM integrations
+Production vector database
+Real embeddings
+Kubernetes deployment
+Advanced analytics dashboard
+Real-time monitoring
+Model registry integration
 
 ---
+#👨‍💻 Conclusion
 
-## ✅ Completion Checklist
+NeuroFlow provides a complete end-to-end RAG infrastructure with:
 
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
+ingestion
+retrieval
+generation
+evaluation
+fine-tuning
 
+The platform demonstrates modern AI engineering workflows and scalable backend architecture for intelligent document systems.
 ---
 
-## 🎯 Output Example
 
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
-```
 
-With structured citations:
 
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
-```
 
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
-
----
