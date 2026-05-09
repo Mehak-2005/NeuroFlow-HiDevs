@@ -18,6 +18,22 @@ from api.pipelines import router as pipeline_router
 from api.finetune import router as finetune_router
 from api.stream import router as stream_router
 
+from prometheus_client import generate_latest
+from fastapi.responses import Response
+
+# ---------------- NEW METRICS IMPORT ---------------- #
+
+from monitoring.metrics import (
+    queries_total,
+    retrieval_latency,
+    generation_latency,
+    llm_cost,
+    queue_depth,
+    eval_faithfulness,
+    eval_overall,
+    active_circuit_breakers_open
+)
+
 # ---------------- APP INIT ---------------- #
 
 app = FastAPI()
@@ -29,11 +45,11 @@ app.include_router(compare_router)
 app.include_router(pipeline_router)
 app.include_router(finetune_router)
 app.include_router(stream_router)
+
 # ---------------- GLOBAL CONNECTIONS ---------------- #
 
 pg_pool = None
 redis_client = None
-
 
 # ---------------- LIFESPAN ---------------- #
 
@@ -47,6 +63,37 @@ async def lifespan(app: FastAPI):
     # Redis
     redis_client = redis.from_url(settings.redis_url)
 
+    # ---------------- SAMPLE METRICS ---------------- #
+
+    queries_total.labels(
+        pipeline_id="pipeline-a",
+        status="success"
+    ).inc()
+
+    retrieval_latency.labels(
+        strategy="dense"
+    ).observe(0.42)
+
+    generation_latency.labels(
+        model="gpt-4o-mini"
+    ).observe(1.25)
+
+    llm_cost.labels(
+        model="gpt-4o-mini"
+    ).observe(0.002)
+
+    queue_depth.set(23)
+
+    eval_faithfulness.labels(
+        pipeline_id="pipeline-a"
+    ).set(0.91)
+
+    eval_overall.labels(
+        pipeline_id="pipeline-a"
+    ).set(0.87)
+
+    active_circuit_breakers_open.set(0)
+
     yield
 
     # Cleanup
@@ -55,7 +102,6 @@ async def lifespan(app: FastAPI):
 
 
 app.router.lifespan_context = lifespan
-
 
 # ---------------- HEALTH CHECK ---------------- #
 
@@ -139,4 +185,21 @@ async def health():
             "queue_depth": 23,
             "worker_count": 2
         }
+    }
+
+# ---------------- METRICS ENDPOINT ---------------- #
+
+@app.get("/metrics")
+async def metrics():
+    return Response(
+        generate_latest(),
+        media_type="text/plain"
+    )
+
+# ---------------- ROOT ---------------- #
+
+@app.get("/")
+async def root():
+    return {
+        "message": "NeuroFlow API working 🚀"
     }
