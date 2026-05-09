@@ -1,228 +1,260 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# NeuroFlow — Full Observability Stack
 
-## 🚀 Overview
+## Overview
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+This task implements a complete observability stack for NeuroFlow including:
 
----
-
-## 🧩 Features Implemented
-
-### 1. Prompt Assembly
-
-* Dynamic prompt building based on query type:
-
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
+- Distributed tracing using OpenTelemetry + Jaeger
+- Custom Prometheus metrics
+- Grafana dashboards
+- Alerting rules with Prometheus
+- Monitoring for ingestion, retrieval, generation, and evaluation pipelines
 
 ---
 
-### 2. Streaming Generation (SSE)
+# Features Implemented
 
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
+## Distributed Tracing
 
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
+Implemented tracing spans for:
+
+### Ingestion
+- ingestion.process
+- ingestion.extract.{source_type}
+- ingestion.chunk
+- ingestion.embed
+- ingestion.write_db
+
+### Retrieval
+- retrieval.pipeline
+- retrieval.dense
+- retrieval.sparse
+- retrieval.metadata
+- retrieval.fusion
+- retrieval.rerank
+- retrieval.assemble
+
+### Generation
+- generation.pipeline
+- generation.prompt_build
+- generation.llm_call
+- generation.citation_parse
+- generation.log_run
+
+### Evaluation
+- evaluation.judge
+- evaluation.faithfulness
+- evaluation.answer_relevance
+- evaluation.context_precision
+- evaluation.context_recall
+
+Each span includes:
+- pipeline_id
+- run_id
+- latency
+- token count
+- chunk count
+- model metadata
 
 ---
 
-### 3. SSE Events Flow
+# Prometheus Metrics
 
-Example stream:
+Implemented custom metrics inside:
 
-```
-data: {"type": "retrieval_start"}
-
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
-
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
-
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
-
----
-
-### 4. Citation Tracking
-
-* Extracts `[Source N]` from response
-* Maps to:
-
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
-
----
-
-### 5. API Endpoints
-
-#### ➤ POST `/query`
-
-Request:
-
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
+```text
+backend/monitoring/metrics.py
 ```
 
-Response:
+## Counters
+neuroflow_queries_total
+neuroflow_ingestion_docs_total
+neuroflow_llm_calls_total
+neuroflow_circuit_breaker_trips_total
 
-* Returns `run_id`
+## Histograms
+neuroflow_retrieval_latency_seconds
+neuroflow_generation_latency_seconds
+neuroflow_llm_cost_usd
 
----
-
-#### ➤ GET `/query/{run_id}/stream`
-
-* Streams response using SSE
-
-Test:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
-
----
-
-### 6. Health Check
-
-```bash
-GET /health
-```
-
-Example:
-
-```json
-{
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
-  }
-}
-```
+## Gauges
+neuroflow_eval_faithfulness
+neuroflow_eval_overall
+neuroflow_queue_depth
+neuroflow_circuit_breakers_open
 
 ---
 
-## ⚙️ Setup Instructions
+## Grafana Dashboards
 
-```bash
-git checkout task-35
-git checkout -b task-36
+Created dashboards for:
 
-cd backend
-source venv/Scripts/activate   # Windows
+### 1. System Overview
+Queries per minute
+Retrieval latency
+Generation latency
+Queue depth
+Circuit breaker status
+LLM cost
 
-pip install sse-starlette
-pip freeze > requirements.txt
+### 2. Quality Monitor
+Faithfulness score
+Answer relevance
+Context precision
+Context recall
+Overall evaluation trend
+Documents ingested
+
+## Alert Rules
+
+Implemented Prometheus alerts:
+
+HighEvaluationFailureRate
+CircuitBreakerOpen
+EvaluationScoreDegraded
+QueueDepthHigh
+
+Located in:
 ```
+infra/prometheus/alerts.yml
+```
+---
+## Tech Stack
+FastAPI
+OpenTelemetry
+Jaeger
+Prometheus
+Grafana
+Docker Compose
+PostgreSQL
+Redis
 
 ---
 
-## ▶️ Run the Project
+## Project Structure
 
-### Start Docker services:
+```
+backend/
+│
+├── monitoring/
+│   ├── metrics.py
+│   ├── tracing.py
+│   └── __init__.py
+│
+├── api/
+├── pipelines/
+└── main.py
 
-```bash
+infra/
+│
+├── docker-compose.yml
+├── grafana/
+└── prometheus/
+    ├── prometheus.yml
+    └── alerts.yml
+```
+
+## Setup Instructions
+
+### 1. Clone Repository
+```
+git clone <repo-url>
+cd NeuroFlow-HiDevs
+```
+### 2. Start Infrastructure
+```
 cd infra
 docker compose up -d
 ```
-
-### Run backend:
-
-```bash
+### 3. Start Backend
+```
 cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
+source venv/Scripts/activate
+python -m uvicorn main:app --reload
 ```
+
+## Service URLs
+
+Service	URL
+
+Backend API	http://127.0.0.1:8000
+
+Metrics	http://127.0.0.1:8000/metrics
+
+Prometheus	http://localhost:9090
+
+Grafana	http://localhost:3001
+
+Jaeger UI	http://localhost:16686
 
 ---
 
-## 🧪 Testing Streaming
+## Grafana Login
 
-Open browser:
+Username: admin
+Password: admin
+---
+## Verification Checklist
 
+### Metrics
+
+Open:
 ```
-http://127.0.0.1:8000/query/abc-123/stream
+http://127.0.0.1:8000/metrics
 ```
+Verify Prometheus metrics are visible.
 
-OR:
+### Prometheus
 
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+Open:
 ```
+http://localhost:9090
+```
+Run query:
+```
+neuroflow_queries_total
+```
+## Alerts
+
+Open:
+```
+http://localhost:9090/alerts
+```
+Verify alert rules are loaded.
+
+## Jaeger Tracing
+
+Open:
+```
+http://localhost:16686
+```
+Verify distributed traces:
+
+retrieval.pipeline
+generation.pipeline
+evaluation.judge
+
+---
+## Example Metrics
+```
+neuroflow_queries_total
+neuroflow_retrieval_latency_seconds
+neuroflow_generation_latency_seconds
+neuroflow_eval_overall
+```
+--- 
+
+## Docker Services
+postgres
+redis
+prometheus
+grafana
+jaeger
+mlflow
 
 ---
 
-## 📁 Folder Structure
+## Author
 
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
-```
-
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
-
----
-
-## 🎯 Output Example
-
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
-```
-
-With structured citations:
-
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
-```
-
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
-
+Mehak
 ---
