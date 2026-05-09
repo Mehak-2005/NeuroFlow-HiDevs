@@ -1,228 +1,203 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# NeuroFlow — Task 11
+Next.js Dashboard — Pipeline Visualization, Query Playground & Live Evaluation Feed
 
-## 🚀 Overview
+This task implements the complete frontend dashboard for NeuroFlow using Next.js 14, TypeScript, Tailwind CSS, and React Query.
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+The dashboard provides an interactive interface for testing RAG pipelines, visualizing evaluations, monitoring documents, and comparing pipeline performance in real time.
 
+## Features Implemented
+### 1. Query Playground (/playground)
+
+Interactive RAG query interface with streaming responses.
+
+Features
+
+Pipeline selector dropdown
+Query input with live character counter
+Compare mode toggle
+Side-by-side pipeline comparison UI
+Streaming SSE response support
+Citation chips
+Citation side drawer
+Feedback buttons (👍 / 👎)
+Evaluation metric score bars
+Async evaluation visualization
+
+Streaming Support
+
+Implemented using:
+
+Server Sent Events (SSE)
+Custom React hook: useSSEStream
+
+Streaming tokens appear progressively instead of rendering all at once.
 ---
 
-## 🧩 Features Implemented
+### 2. Pipeline Manager (/pipelines)
+   
+Pipeline visualization and analytics dashboard.
 
-### 1. Prompt Assembly
-
-* Dynamic prompt building based on query type:
-
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
-
+Features
+Pipeline cards
+Version display
+Average evaluation scores
+Query statistics
+Pipeline health visualization
+JSON pipeline editor support
+Analytics visualization placeholders
 ---
 
-### 2. Streaming Generation (SSE)
+### 3. Evaluation Feed (/evaluations)
+   
+Real-time evaluation monitoring dashboard.
 
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
-
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
-
+Features
+Live evaluation feed
+SSE event handling
+Evaluation cards
+Metric visualization
+Query monitoring UI
+Pipeline filtering support
 ---
 
-### 3. SSE Events Flow
+### 4. Documents Dashboard (/documents)
+Document ingestion and chunk monitoring interface.
 
-Example stream:
+Features
+Drag-and-drop upload zone
+Multiple file upload support
+File status table
+Animated processing badge
+Chunk count visualization
+Similar chunk search button
+Upload metadata display
+---
+
+## Tech Stack
+Frontend
+Next.js 14
+TypeScript
+Tailwind CSS
+React Query
+Axios
+Zustand
+Recharts
+Monaco Editor
+
+Backend Integration
+FastAPI
+SSE Streaming
+Redis Pub/Sub
+PostgreSQL
+MLflow 
+
+## 🧩 Folder Structure
+```
+frontend/
+│
+├── src/
+│   ├── app/
+│   │   ├── playground/
+│   │   ├── pipelines/
+│   │   ├── evaluations/
+│   │   └── documents/
+│   │
+│   ├── hooks/
+│   │   └── useSSEStream.ts
+│   │
+│   └── components/
+│
+├── public/
+├── package.json
+└── tsconfig.json
 
 ```
-data: {"type": "retrieval_start"}
 
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
-
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
-
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
+## Installed Packages
+```
+npm install @tanstack/react-query axios zustand recharts @xyflow/react @monaco-editor/react
 ```
 
----
 
-### 4. Citation Tracking
-
-* Extracts `[Source N]` from response
-* Maps to:
-
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
-
----
-
-### 5. API Endpoints
-
-#### ➤ POST `/query`
-
-Request:
-
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
+## Running the Frontend
+Start Next.js
 ```
-
-Response:
-
-* Returns `run_id`
-
----
-
-#### ➤ GET `/query/{run_id}/stream`
-
-* Streams response using SSE
-
-Test:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+cd frontend
+npm install
+npm run dev
 ```
-
----
-
-### 6. Health Check
-
-```bash
-GET /health
+Frontend runs at:
 ```
-
-Example:
-
-```json
-{
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
-  }
-}
+http://localhost:3000
 ```
+## Backend Requirements
 
----
-
-## ⚙️ Setup Instructions
-
-```bash
-git checkout task-35
-git checkout -b task-36
-
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
+Ensure backend services are running:
 ```
-
----
-
-## ▶️ Run the Project
-
-### Start Docker services:
-
-```bash
 cd infra
 docker compose up -d
 ```
-
-### Run backend:
-
-```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
+Then run FastAPI backend:
 ```
+cd backend
+source venv/Scripts/activate
+python -m uvicorn main:app --reload
+```
+Backend runs at:
+```
+http://127.0.0.1:8000
+```
+## SSE Streaming Verification
 
----
-
-## 🧪 Testing Streaming
-
-Open browser:
-
+Open:
 ```
 http://127.0.0.1:8000/query/abc-123/stream
 ```
+Expected:
 
-OR:
+Retrieval events
+Token-by-token streaming
+Final citations payloadts
 
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
 
----
+## Completed Requirements Checklist
 
-## 📁 Folder Structure
+ ### Playground
+ Streaming token response
+ Compare mode
+ Citation drawer
+ Evaluation gauges
+ Feedback buttons
+ 
+### Pipelines
+ Pipeline cards
+ Score visualization
+ Analytics placeholders
+ 
+### Evaluations
+ Real-time SSE feed
+ Evaluation cards
+ Metric visualization
 
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
-```
-
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
+### Documents
+ Upload zone
+ Processing badge
+ Similar chunk search
 
 ---
 
-## 🎯 Output Example
-
+## Git Commands 
 ```
-Artificial intelligence is the simulation of human intelligence [Source 1]
+git add frontend/ backend/
+git commit -m "feat: Next.js dashboard with playground, pipeline manager, and evaluation feed"
+git push -u origin task-41
 ```
+## Result
 
-With structured citations:
+Task 11 successfully adds a modern interactive dashboard for NeuroFlow with:
 
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
-```
-
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
-
----
+live SSE streaming,
+RAG pipeline comparison,
+evaluation monitoring,
+document visualization,
+and frontend analytics support.
