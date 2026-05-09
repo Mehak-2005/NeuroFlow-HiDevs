@@ -13,11 +13,10 @@ from api.query import router as query_router
 
 from config import settings   # make sure config.py exists
 from backend.api.compare import router as compare_router
-
 from api.compare import router as compare_router
 from api.pipelines import router as pipeline_router
 from api.finetune import router as finetune_router
-
+from api.stream import router as stream_router
 
 # ---------------- APP INIT ---------------- #
 
@@ -29,6 +28,7 @@ app.include_router(query_router)
 app.include_router(compare_router)
 app.include_router(pipeline_router)
 app.include_router(finetune_router)
+app.include_router(stream_router)
 # ---------------- GLOBAL CONNECTIONS ---------------- #
 
 pg_pool = None
