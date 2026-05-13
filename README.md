@@ -1,228 +1,227 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# Task 15 — Production Containerization
 
-## 🚀 Overview
+## Overview
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+This task focuses on production-grade containerization for NeuroFlow using:
 
----
-
-## 🧩 Features Implemented
-
-### 1. Prompt Assembly
-
-* Dynamic prompt building based on query type:
-
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
+- Multi-stage Docker builds
+- Non-root containers
+- Read-only filesystem
+- Docker Compose production deployment
+- Nginx reverse proxy
+- Rate limiting
+- Health probes
+- Security hardening
 
 ---
 
-### 2. Streaming Generation (SSE)
+# Features Implemented
 
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
+## Backend Multi-Stage Dockerfile
 
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
+Implemented:
+- Python 3.11 slim image
+- Multi-stage build
+- Minimal runtime image
+- Non-root user (`neuroflow`)
+- Health check support
+- Production Uvicorn workers
+
+### Security Features
+
+- Non-root execution
+- Read-only filesystem
+- No Linux capabilities
+- `no-new-privileges`
+- Temporary writable `/tmp`
 
 ---
 
-### 3. SSE Events Flow
+## Frontend Dockerfile
 
-Example stream:
+Implemented:
+- Node.js build stage
+- Nginx runtime stage
+- Optimized production assets
+- Static file serving
 
+---
+
+# Production Docker Compose
+
+File:
+```bash
+infra/docker-compose.prod.yml
 ```
-data: {"type": "retrieval_start"}
 
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
+Services:
+- PostgreSQL
+- Redis
+- API
+- Worker
+- Nginx
 
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
+---
 
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
+# Resource Limits
+
+| Service | Memory | CPU |
+|---|---|---|
+| PostgreSQL | 2 GB | 2 CPU |
+| Redis | 512 MB | 0.5 CPU |
+| API | 1 GB | 1 CPU |
+| Worker | 2 GB | 2 CPU |
+
+---
+
+# Nginx Features
+
+Implemented:
+- Reverse proxy
+- API load balancing
+- Rate limiting
+- Gzip compression
+- Security headers
+
+---
+
+# Security Headers
+
+Added:
+- X-Frame-Options
+- X-Content-Type-Options
+- Content-Security-Policy
+
+---
+
+# Health Checks
+
+Backend health endpoint:
+
+```bash
+/health
+```
+
+Docker health probe:
+
+```dockerfile
+HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1
 ```
 
 ---
 
-### 4. Citation Tracking
+# Security Hardening
 
-* Extracts `[Source N]` from response
-* Maps to:
+## Non-Root User
 
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
+Container runs as:
+
+```bash
+neuroflow
+```
 
 ---
 
-### 5. API Endpoints
+## Read-Only Filesystem
 
-#### ➤ POST `/query`
+Enabled:
 
-Request:
+```yaml
+read_only: true
+```
 
+---
+
+## Dropped Linux Capabilities
+
+```yaml
+cap_drop:
+  - ALL
+```
+
+---
+
+# Build Instructions
+
+## Build Containers
+
+```bash
+docker compose -f infra/docker-compose.prod.yml build
+```
+
+---
+
+## Start Containers
+
+```bash
+docker compose -f infra/docker-compose.prod.yml up -d
+```
+
+---
+
+# Verification
+
+## Verify Non-Root User
+
+```bash
+docker exec neuroflow-api-1 whoami
+```
+
+Expected:
+```bash
+neuroflow
+```
+
+---
+
+## Verify Read-Only Filesystem
+
+```bash
+docker exec neuroflow-api-1 touch /test
+```
+
+Expected:
+Permission denied.
+
+---
+
+## Verify Health Check
+
+```bash
+docker inspect neuroflow-api-1 | grep Health
+```
+
+---
+
+## Verify Capabilities Dropped
+
+```bash
+docker inspect neuroflow-api-1
+```
+
+Expected:
 ```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
+"CapDrop": ["ALL"]
 ```
-
-Response:
-
-* Returns `run_id`
 
 ---
 
-#### ➤ GET `/query/{run_id}/stream`
+## Verify Rate Limiting
 
-* Streams response using SSE
-
-Test:
+Sending more than 60 requests/minute returns:
 
 ```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+429 Too Many Requests
 ```
 
 ---
 
-### 6. Health Check
+# Final Outcome
 
-```bash
-GET /health
-```
-
-Example:
-
-```json
-{
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
-  }
-}
-```
-
----
-
-## ⚙️ Setup Instructions
-
-```bash
-git checkout task-35
-git checkout -b task-36
-
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
-```
-
----
-
-## ▶️ Run the Project
-
-### Start Docker services:
-
-```bash
-cd infra
-docker compose up -d
-```
-
-### Run backend:
-
-```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
-```
-
----
-
-## 🧪 Testing Streaming
-
-Open browser:
-
-```
-http://127.0.0.1:8000/query/abc-123/stream
-```
-
-OR:
-
-```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
-```
-
----
-
-## 📁 Folder Structure
-
-```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
-
-backend/
-  api/
-    query.py
-```
-
----
-
-## ✅ Completion Checklist
-
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
-
----
-
-## 🎯 Output Example
-
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
-```
-
-With structured citations:
-
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
-```
-
----
-
-## 📌 Conclusion
-
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
-
-* grounded responses
-* citation tracking
-* SSE-based streaming
-
----
+NeuroFlow is now production-ready with:
+- hardened containers
+- minimal runtime images
+- secure Nginx proxy
+- health monitoring
+- resource isolation
+- scalable API deployment
