@@ -59,3 +59,4 @@ async def stream(run_id: str):
             }
 
     return EventSourceResponse(event_generator())
+

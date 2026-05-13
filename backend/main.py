@@ -21,6 +21,16 @@ from api.stream import router as stream_router
 from prometheus_client import generate_latest
 from fastapi.responses import Response
 
+from fastapi import Depends, HTTPException
+from security.auth import (
+    create_access_token,
+    FAKE_CLIENTS
+)
+from security.auth import require_scope
+from fastapi import Depends
+from starlette.middleware.base import BaseHTTPMiddleware
+import uuid
+
 # ---------------- NEW METRICS IMPORT ---------------- #
 
 from monitoring.metrics import (
@@ -203,3 +213,44 @@ async def root():
     return {
         "message": "NeuroFlow API working 🚀"
     }
+
+@app.post("/auth/token")
+async def login(body: dict):
+
+    client_id = body.get("client_id")
+    client_secret = body.get("client_secret")
+
+    client = FAKE_CLIENTS.get(client_id)
+
+    if not client:
+        raise HTTPException(status_code=401)
+
+    if client["client_secret"] != client_secret:
+        raise HTTPException(status_code=401)
+
+    token = create_access_token(
+        client_id,
+        client["scopes"]
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": 3600
+    }
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request, call_next):
+
+        response = await call_next(request)
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        response.headers["X-Request-ID"] = str(uuid.uuid4())
+
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
