@@ -190,6 +190,7 @@ ruff check backend/
 
 ---
 
+
 ## Run MyPy
 
 ```bash
@@ -231,3 +232,6 @@ NeuroFlow now includes:
 - reliable unit testing pipeline
 
 This ensures every push is validated automatically before deployment.
+=======
+# trigger actions
+
