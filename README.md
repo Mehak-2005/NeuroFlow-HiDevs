@@ -1,228 +1,233 @@
-# 📌 Task 6 — RAG Generation Pipeline (Streaming SSE + Citations)
+# Task 16 — CI/CD Pipeline
 
-## 🚀 Overview
+## Overview
 
-This task implements the **Generation Pipeline** for a Retrieval-Augmented Generation (RAG) system.
-It takes retrieved context (Task 5) and generates a **grounded, cited response** using streaming.
+This task implements a production-grade CI/CD pipeline for NeuroFlow using GitHub Actions.
 
----
-
-## 🧩 Features Implemented
-
-### 1. Prompt Assembly
-
-* Dynamic prompt building based on query type:
-
-  * factual
-  * analytical
-  * comparative
-  * procedural
-* Context injected inside `<context>` tags
-* Strict grounding:
-
-  * No hallucination
-  * Mandatory citations `[Source N]`
+The pipeline automates:
+- linting
+- type checking
+- unit testing
+- security scanning
+- Docker image building
+- quality gate validation
 
 ---
 
-### 2. Streaming Generation (SSE)
+# Features Implemented
 
-* Implemented using **sse-starlette**
-* Token-by-token streaming response
-* Supports:
+## GitHub Actions Workflows
 
-  * real-time output
-  * long-running responses
-  * keepalive events (prevents timeout)
-
----
-
-### 3. SSE Events Flow
-
-Example stream:
-
-```
-data: {"type": "retrieval_start"}
-
-data: {"type": "retrieval_complete", "chunk_count": 3, "sources": ["doc1.pdf"]}
-
-data: {"type": "token", "delta": "Artificial "}
-data: {"type": "token", "delta": "intelligence "}
-
-data: {"type": "done", "run_id": "abc-123", "citations": [...]}
-```
-
----
-
-### 4. Citation Tracking
-
-* Extracts `[Source N]` from response
-* Maps to:
-
-  * chunk_id
-  * document name
-  * page number
-* Flags invalid citations (hallucinations)
-
----
-
-### 5. API Endpoints
-
-#### ➤ POST `/query`
-
-Request:
-
-```json
-{
-  "query": "What is AI?",
-  "pipeline_id": "123",
-  "stream": true
-}
-```
-
-Response:
-
-* Returns `run_id`
-
----
-
-#### ➤ GET `/query/{run_id}/stream`
-
-* Streams response using SSE
-
-Test:
+Implemented workflows inside:
 
 ```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+.github/workflows/
 ```
+
+### Workflows
+
+| Workflow | Purpose |
+|---|---|
+| ci.yml | Linting, testing, security scanning |
+| build.yml | Docker image build pipeline |
+| quality-gate.yml | Nightly quality checks |
 
 ---
 
-### 6. Health Check
+# CI Workflow
+
+File:
 
 ```bash
-GET /health
+.github/workflows/ci.yml
 ```
 
-Example:
+### Jobs
 
-```json
-{
-  "status": "ok",
-  "checks": {
-    "postgres": true,
-    "redis": true,
-    "mlflow": true
-  }
-}
-```
+## Lint Job
 
----
+Runs:
+- Ruff
+- MyPy
 
-## ⚙️ Setup Instructions
+Commands:
 
 ```bash
-git checkout task-35
-git checkout -b task-36
-
-cd backend
-source venv/Scripts/activate   # Windows
-
-pip install sse-starlette
-pip freeze > requirements.txt
+ruff check backend/
+mypy backend/ --ignore-missing-imports
 ```
 
 ---
 
-## ▶️ Run the Project
+## Test Job
 
-### Start Docker services:
+Runs:
+- Pytest
+- Coverage reporting
+
+Services:
+- PostgreSQL
+- Redis
+
+Command:
 
 ```bash
-cd infra
-docker compose up -d
+pytest tests/unit/ -v --cov=backend --cov-report=xml
 ```
 
-### Run backend:
+---
+
+## Security Job
+
+Runs:
+- detect-secrets
+- pip-audit
+
+Purpose:
+- dependency vulnerability scanning
+- secret detection
+
+---
+
+# Build Workflow
+
+File:
 
 ```bash
-cd ../backend
-set PYTHONPATH=..
-uvicorn main:app --reload
+.github/workflows/build.yml
 ```
+
+Features:
+- Docker Buildx
+- GHCR authentication
+- Docker image builds
+- image validation
 
 ---
 
-## 🧪 Testing Streaming
+# Quality Gate Workflow
 
-Open browser:
-
-```
-http://127.0.0.1:8000/query/abc-123/stream
-```
-
-OR:
+File:
 
 ```bash
-curl -N http://127.0.0.1:8000/query/abc-123/stream
+.github/workflows/quality-gate.yml
+```
+
+Runs nightly at:
+```text
+2 AM
+```
+
+Checks:
+- Retrieval benchmark quality
+- MRR threshold validation
+
+Fails pipeline if:
+```text
+MRR < 0.55
 ```
 
 ---
 
-## 📁 Folder Structure
+# Ruff Configuration
 
+Defined in:
+
+```bash
+pyproject.toml
 ```
-pipelines/
-  generation/
-    prompt_builder.py
-    generator.py
-    citations.py
 
-backend/
-  api/
-    query.py
+Features:
+- Python 3.11 support
+- strict linting
+- async checks
+- naming validation
+
+---
+
+# MyPy Configuration
+
+Strict type checking enabled.
+
+```toml
+strict = true
 ```
 
 ---
 
-## ✅ Completion Checklist
+# Unit Tests
 
-* [x] Prompt builder implemented
-* [x] Streaming SSE working
-* [x] Token streaming verified
-* [x] Citation parsing working
-* [x] Invalid citations flagged
-* [x] Health endpoint working
+Implemented inside:
 
----
-
-## 🎯 Output Example
-
-```
-Artificial intelligence is the simulation of human intelligence [Source 1]
+```bash
+tests/unit/
 ```
 
-With structured citations:
+### Test Files
 
-```json
-[
-  {
-    "source": "Source 1",
-    "chunk_id": "1",
-    "document": "doc1.pdf",
-    "page": 1
-  }
-]
+| File | Purpose |
+|---|---|
+| test_chunker.py | Chunking validation |
+| test_fusion.py | RRF logic tests |
+| test_circuit_breaker.py | State transitions |
+| test_prompt_injection.py | Injection detection |
+| test_pipeline_config.py | Config validation |
+
+Minimum:
+```text
+5 tests per file
 ```
 
 ---
 
-## 📌 Conclusion
+# Running Locally
 
-Task 6 successfully implements a **real-time streaming RAG generation pipeline** with:
+## Run Ruff
 
-* grounded responses
-* citation tracking
-* SSE-based streaming
+```bash
+ruff check backend/
+```
 
 ---
+
+## Run MyPy
+
+```bash
+mypy backend/ --ignore-missing-imports
+```
+
+---
+
+## Run Unit Tests
+
+```bash
+pytest tests/unit/ -v
+```
+
+---
+
+# GitHub Actions Verification
+
+Open:
+```text
+GitHub Repository → Actions Tab
+```
+
+Verify:
+- CI passes
+- Build passes
+- Security checks pass
+
+---
+
+# Final Outcome
+
+NeuroFlow now includes:
+- automated CI/CD
+- linting and type validation
+- automated security scanning
+- Docker build automation
+- nightly quality gates
+- reliable unit testing pipeline
+
+This ensures every push is validated automatically before deployment.
