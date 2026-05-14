@@ -4,8 +4,8 @@ class RoutingCriteria:
         self.require_vision = require_vision
         self.require_long_context = require_long_context
 
-class ModelRouter:
 
+class ModelRouter:
     def route(self, criteria):
         if criteria.require_long_context:
             return "anthropic"

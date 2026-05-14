@@ -1,15 +1,12 @@
-from .openai_provider import OpenAIProvider
 from .anthropic_provider import AnthropicProvider
+from .openai_provider import OpenAIProvider
 from .router import ModelRouter
 
-class NeuroFlowClient:
 
+class NeuroFlowClient:
     def __init__(self):
         self.router = ModelRouter()
-        self.providers = {
-            "openai": OpenAIProvider(),
-            "anthropic": AnthropicProvider()
-        }
+        self.providers = {"openai": OpenAIProvider(), "anthropic": AnthropicProvider()}
 
     async def chat(self, messages, criteria):
         provider_key = self.router.route(criteria)

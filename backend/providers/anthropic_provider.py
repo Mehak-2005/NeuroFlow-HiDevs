@@ -1,21 +1,22 @@
 import anthropic
-from .base import BaseLLMProvider, ChatMessage
+
+from .base import BaseLLMProvider
 
 client = anthropic.AsyncAnthropic()
 
-class AnthropicProvider(BaseLLMProvider):
 
+class AnthropicProvider(BaseLLMProvider):
     async def complete(self, messages, **kwargs):
         res = await client.messages.create(
             model="claude-3-haiku-20240307",
-            messages=[{"role": m.role, "content": m.content} for m in messages]
+            messages=[{"role": m.role, "content": m.content} for m in messages],
         )
         return res
 
     async def stream(self, messages, **kwargs):
         async with client.messages.stream(
             model="claude-3-haiku-20240307",
-            messages=[{"role": m.role, "content": m.content} for m in messages]
+            messages=[{"role": m.role, "content": m.content} for m in messages],
         ) as stream:
             async for text in stream.text_stream:
                 yield text

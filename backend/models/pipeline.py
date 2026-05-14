@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Dict
+from pydantic import BaseModel, ConfigDict
+
 
 class IngestionConfig(BaseModel):
     chunking_strategy: str
     chunk_size_tokens: int
     chunk_overlap_tokens: int
-    extractors_enabled: List[str]
+    extractors_enabled: list[str]
+
 
 class RetrievalConfig(BaseModel):
     dense_k: int
@@ -15,15 +16,18 @@ class RetrievalConfig(BaseModel):
     query_expansion: bool
     metadata_filters_enabled: bool
 
+
 class GenerationConfig(BaseModel):
-    model_routing: Dict
+    model_routing: dict
     max_context_tokens: int
     temperature: float
     system_prompt_variant: str
 
+
 class EvaluationConfig(BaseModel):
     auto_evaluate: bool
     training_threshold: float
+
 
 class PipelineConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")  # 🚨 IMPORTANT

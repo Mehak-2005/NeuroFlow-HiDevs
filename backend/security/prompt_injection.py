@@ -8,17 +8,13 @@ INJECTION_PATTERNS = [
     r"forget (everything|all|previous)",
     r"act as (if |a |an )",
     r"\[\[(system|SYSTEM)\]\]",
-    r"<\|system\|>"
+    r"<\|system\|>",
 ]
+
 
 def detect_prompt_injection(text: str):
     for pattern in INJECTION_PATTERNS:
         if re.search(pattern, text, re.IGNORECASE):
-            return {
-                "prompt_injection_detected": True,
-                "pattern": pattern
-            }
+            return {"prompt_injection_detected": True, "pattern": pattern}
 
-    return {
-        "prompt_injection_detected": False
-    }
+    return {"prompt_injection_detected": False}

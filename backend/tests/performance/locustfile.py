@@ -1,15 +1,11 @@
-from locust import HttpUser, task, between
 import random
 
-SAMPLE_QUERIES = [
-    "What is AI?",
-    "Explain transformers",
-    "What is RAG?"
-]
+from locust import HttpUser, between, task
+
+SAMPLE_QUERIES = ["What is AI?", "Explain transformers", "What is RAG?"]
 
 
 class QueryUser(HttpUser):
-
     host = "http://localhost:8000"
 
     wait_time = between(1, 2)
@@ -19,16 +15,10 @@ class QueryUser(HttpUser):
     @task
     def query_pipeline(self):
 
-        self.client.post(
-            "/query",
-            json={
-                "query": random.choice(SAMPLE_QUERIES)
-            }
-        )
+        self.client.post("/query", json={"query": random.choice(SAMPLE_QUERIES)})
 
 
 class IngestUser(HttpUser):
-
     host = "http://localhost:8000"
 
     wait_time = between(2, 5)
@@ -39,15 +29,10 @@ class IngestUser(HttpUser):
     def ingest_document(self):
 
         with open("tests/fixtures/test_doc.pdf", "rb") as f:
-
-            self.client.post(
-                "/ingest",
-                files={"file": f}
-            )
+            self.client.post("/ingest", files={"file": f})
 
 
 class AdminUser(HttpUser):
-
     host = "http://localhost:8000"
 
     wait_time = between(3, 5)

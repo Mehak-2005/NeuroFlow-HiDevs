@@ -1,7 +1,7 @@
 import time
 
-class TokenBucket:
 
+class TokenBucket:
     def __init__(self, capacity, refill_rate):
         self.capacity = capacity
         self.tokens = capacity
@@ -13,10 +13,7 @@ class TokenBucket:
         now = time.time()
         elapsed = now - self.last_refill
 
-        self.tokens = min(
-            self.capacity,
-            self.tokens + elapsed * self.refill_rate
-        )
+        self.tokens = min(self.capacity, self.tokens + elapsed * self.refill_rate)
 
         self.last_refill = now
 

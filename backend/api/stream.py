@@ -1,8 +1,10 @@
-from fastapi import APIRouter
-from sse_starlette.sse import EventSourceResponse
 import asyncio
 
+from fastapi import APIRouter
+from sse_starlette.sse import EventSourceResponse
+
 router = APIRouter()
+
 
 @router.get("/query/{run_id}/stream")
 async def stream_query(run_id: str):
@@ -17,7 +19,7 @@ async def stream_query(run_id: str):
             " simulation",
             " of",
             " human",
-            " intelligence."
+            " intelligence.",
         ]
 
         for word in words:

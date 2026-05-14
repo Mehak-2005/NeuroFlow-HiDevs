@@ -1,18 +1,12 @@
 import time
 
+
 class CircuitOpenError(Exception):
     pass
 
 
 class CircuitBreaker:
-
-    def __init__(
-        self,
-        name,
-        failure_threshold=5,
-        recovery_timeout=60,
-        half_open_max_calls=3
-    ):
+    def __init__(self, name, failure_threshold=5, recovery_timeout=60, half_open_max_calls=3):
         self.name = name
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout

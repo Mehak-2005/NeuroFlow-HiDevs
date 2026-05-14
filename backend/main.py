@@ -1,48 +1,39 @@
-import sys
 import os
+import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
-import asyncpg
-import redis.asyncio as redis
-import httpx
-
-from api.ingest import router as ingest_router
-from api.query import router as query_router
-
-from config import settings   # make sure config.py exists
-from backend.api.compare import router as compare_router
-from api.compare import router as compare_router
-from api.pipelines import router as pipeline_router
-from api.finetune import router as finetune_router
-from api.stream import router as stream_router
-
-from prometheus_client import generate_latest
-from fastapi.responses import Response
-
-from fastapi import Depends, HTTPException
-from security.auth import (
-    create_access_token,
-    FAKE_CLIENTS
-)
-from security.auth import require_scope
-from fastapi import Depends
-from starlette.middleware.base import BaseHTTPMiddleware
 import uuid
+from contextlib import asynccontextmanager
+
+import asyncpg
+import httpx
+import redis.asyncio as redis
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
+from prometheus_client import generate_latest
+from starlette.middleware.base import BaseHTTPMiddleware
+from backend.api.compare import router
+from backend.api.compare import router as compare_router
+from backend.api.finetune import router as finetune_router
+from backend.api.ingest import router as ingest_router
+from backend.api.pipelines import router as pipeline_router
+from backend.api.query import router as query_router
+from backend.api.stream import router as stream_router
+from backend.config import settings # make sure config.py exists
 
 # ---------------- NEW METRICS IMPORT ---------------- #
-
-from monitoring.metrics import (
-    queries_total,
-    retrieval_latency,
-    generation_latency,
-    llm_cost,
-    queue_depth,
+from backend.monitoring.metrics import (
+    active_circuit_breakers_open,
     eval_faithfulness,
     eval_overall,
-    active_circuit_breakers_open
+    generation_latency,
+    llm_cost,
+    queries_total,
+    queue_depth,
+    retrieval_latency,
 )
+from backend.security.auth import FAKE_CLIENTS, create_access_token
 
 # ---------------- APP INIT ---------------- #
 
@@ -63,6 +54,7 @@ redis_client = None
 
 # ---------------- LIFESPAN ---------------- #
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pg_pool, redis_client
@@ -75,32 +67,19 @@ async def lifespan(app: FastAPI):
 
     # ---------------- SAMPLE METRICS ---------------- #
 
-    queries_total.labels(
-        pipeline_id="pipeline-a",
-        status="success"
-    ).inc()
+    queries_total.labels(pipeline_id="pipeline-a", status="success").inc()
 
-    retrieval_latency.labels(
-        strategy="dense"
-    ).observe(0.42)
+    retrieval_latency.labels(strategy="dense").observe(0.42)
 
-    generation_latency.labels(
-        model="gpt-4o-mini"
-    ).observe(1.25)
+    generation_latency.labels(model="gpt-4o-mini").observe(1.25)
 
-    llm_cost.labels(
-        model="gpt-4o-mini"
-    ).observe(0.002)
+    llm_cost.labels(model="gpt-4o-mini").observe(0.002)
 
     queue_depth.set(23)
 
-    eval_faithfulness.labels(
-        pipeline_id="pipeline-a"
-    ).set(0.91)
+    eval_faithfulness.labels(pipeline_id="pipeline-a").set(0.91)
 
-    eval_overall.labels(
-        pipeline_id="pipeline-a"
-    ).set(0.87)
+    eval_overall.labels(pipeline_id="pipeline-a").set(0.87)
 
     active_circuit_breakers_open.set(0)
 
@@ -115,37 +94,27 @@ app.router.lifespan_context = lifespan
 
 # ---------------- HEALTH CHECK ---------------- #
 
+
 async def check_postgres():
     try:
         async with pg_pool.acquire() as conn:
             await conn.execute("SELECT 1")
 
-        return {
-            "status": "ok",
-            "latency_ms": 3
-        }
+        return {"status": "ok", "latency_ms": 3}
 
-    except:
-        return {
-            "status": "down",
-            "latency_ms": 0
-        }
+    except Exception as e:
+        print(f"Error occurred while checking Postgres: {e}")
+        return {"status": "down", "latency_ms": 0}
 
 
 async def check_redis():
     try:
         await redis_client.ping()
 
-        return {
-            "status": "ok",
-            "latency_ms": 1
-        }
+        return {"status": "ok", "latency_ms": 1}
 
-    except:
-        return {
-            "status": "down",
-            "latency_ms": 0
-        }
+    except Exception :
+        return {"status": "down", "latency_ms": 0}
 
 
 async def check_mlflow():
@@ -153,16 +122,10 @@ async def check_mlflow():
         async with httpx.AsyncClient() as client:
             res = await client.get(settings.MLFLOW_URL)
 
-        return {
-            "status": "ok" if res.status_code == 200 else "down",
-            "latency_ms": 45
-        }
+        return {"status": "ok" if res.status_code == 200 else "down", "latency_ms": 45}
 
-    except:
-        return {
-            "status": "down",
-            "latency_ms": 0
-        }
+    except Exception:
+        return {"status": "down", "latency_ms": 0}
 
 
 @app.get("/health")
@@ -174,10 +137,7 @@ async def health():
 
     overall_status = "ok"
 
-    if (
-        postgres["status"] == "down"
-        or redis_check["status"] == "down"
-    ):
+    if postgres["status"] == "down" or redis_check["status"] == "down":
         overall_status = "critical"
 
     return {
@@ -186,33 +146,28 @@ async def health():
             "postgres": postgres,
             "redis": redis_check,
             "mlflow": mlflow,
-            "circuit_breakers": {
-                "openai": {
-                    "state": "closed",
-                    "failure_count": 0
-                }
-            },
+            "circuit_breakers": {"openai": {"state": "closed", "failure_count": 0}},
             "queue_depth": 23,
-            "worker_count": 2
-        }
+            "worker_count": 2,
+        },
     }
+
 
 # ---------------- METRICS ENDPOINT ---------------- #
 
+
 @app.get("/metrics")
 async def metrics():
-    return Response(
-        generate_latest(),
-        media_type="text/plain"
-    )
+    return Response(generate_latest(), media_type="text/plain")
+
 
 # ---------------- ROOT ---------------- #
 
+
 @app.get("/")
 async def root():
-    return {
-        "message": "NeuroFlow API working 🚀"
-    }
+    return {"message": "NeuroFlow API working 🚀"}
+
 
 @app.post("/auth/token")
 async def login(body: dict):
@@ -228,19 +183,12 @@ async def login(body: dict):
     if client["client_secret"] != client_secret:
         raise HTTPException(status_code=401)
 
-    token = create_access_token(
-        client_id,
-        client["scopes"]
-    )
+    token = create_access_token(client_id, client["scopes"])
 
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "expires_in": 3600
-    }
+    return {"access_token": token, "token_type": "bearer", "expires_in": 3600}
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-
     async def dispatch(self, request, call_next):
 
         response = await call_next(request)
@@ -252,5 +200,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = str(uuid.uuid4())
 
         return response
+
 
 app.add_middleware(SecurityHeadersMiddleware)

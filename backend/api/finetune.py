@@ -1,11 +1,12 @@
 from fastapi import APIRouter
 from pipelines.finetuning.extractor import extract_training_data
-from pipelines.finetuning.tracker import start_training_job
 from pipelines.finetuning.job_manager import submit_finetune_job
+from pipelines.finetuning.tracker import start_training_job
 
 router = APIRouter()
 
 jobs = []
+
 
 @router.post("/finetune/jobs")
 async def create_job():
@@ -14,17 +15,14 @@ async def create_job():
 
     run_id = start_training_job(job_id, pairs)
 
-    provider_job_id = await submit_finetune_job(
-        str(path),
-        "gpt-3.5-turbo"
-    )
+    provider_job_id = await submit_finetune_job(str(path), "gpt-3.5-turbo")
 
     result = {
         "job_id": job_id,
         "mlflow_run_id": run_id,
         "provider_job_id": provider_job_id,
         "pair_count": len(pairs),
-        "status": "submitted"
+        "status": "submitted",
     }
 
     jobs.append(result)

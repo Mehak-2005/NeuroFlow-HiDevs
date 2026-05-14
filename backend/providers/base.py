@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+
 
 @dataclass
 class ChatMessage:
     role: str
     content: str | list
+
 
 @dataclass
 class GenerationResult:
@@ -17,8 +19,8 @@ class GenerationResult:
     cost_usd: float
     finish_reason: str
 
-class BaseLLMProvider(ABC):
 
+class BaseLLMProvider(ABC):
     @abstractmethod
     async def complete(self, messages: list[ChatMessage], **kwargs) -> GenerationResult:
         pass

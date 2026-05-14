@@ -1,9 +1,6 @@
 import asyncio
 
-from resilience.circuit_breaker import (
-    CircuitBreaker,
-    CircuitOpenError
-)
+from resilience.circuit_breaker import CircuitBreaker, CircuitOpenError
 
 breaker = CircuitBreaker("openai")
 
@@ -17,8 +14,8 @@ async def test():
     for i in range(5):
         try:
             await breaker.call(failing_function)
-        except:
-            print(f"Failure {i+1}")
+        except Exception:
+            print(f"Failure {i + 1}")
 
     try:
         await breaker.call(failing_function)

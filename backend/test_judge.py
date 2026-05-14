@@ -1,6 +1,6 @@
 import asyncio
-import sys
 import os
+import sys
 
 # FIX IMPORT PATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -14,7 +14,7 @@ async def test():
     result = await judge.evaluate(
         "What is AI?",
         "AI is simulation of human intelligence.",
-        ["Artificial intelligence is simulation of human intelligence."]
+        ["Artificial intelligence is simulation of human intelligence."],
     )
 
     print("\nFINAL RESULT:\n", result)

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, UploadFile, File
 import shutil
 import uuid
 
+from fastapi import APIRouter, File, UploadFile
+
 router = APIRouter()
+
 
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
@@ -12,8 +14,4 @@ async def ingest(file: UploadFile = File(...)):
     with open(path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    return {
-        "document_id": file_id,
-        "status": "queued",
-        "duplicate": False
-    }
+    return {"document_id": file_id, "status": "queued", "duplicate": False}
