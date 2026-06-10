@@ -1,237 +1,183 @@
-# Task 16 — CI/CD Pipeline
+# Task 17 – Backend Deployment on Railway
 
 ## Overview
 
-This task implements a production-grade CI/CD pipeline for NeuroFlow using GitHub Actions.
-
-The pipeline automates:
-- linting
-- type checking
-- unit testing
-- security scanning
-- Docker image building
-- quality gate validation
+This task focused on deploying the NeuroFlow backend to Railway using Docker, configuring the required infrastructure services, and validating application startup.
 
 ---
 
-# Features Implemented
+## Deployment Details
 
-## GitHub Actions Workflows
+### Platform
+- Railway
 
-Implemented workflows inside:
+### Branch
+- task-17
 
-```bash
-.github/workflows/
-```
+### Root Directory
+- backend
 
-### Workflows
-
-| Workflow | Purpose |
-|---|---|
-| ci.yml | Linting, testing, security scanning |
-| build.yml | Docker image build pipeline |
-| quality-gate.yml | Nightly quality checks |
+### Deployment Method
+- Dockerfile-based deployment
 
 ---
 
-# CI Workflow
+## Infrastructure Setup
 
-File:
+### PostgreSQL
+- Railway PostgreSQL service configured
+- Database URL connected through environment variables
 
-```bash
-.github/workflows/ci.yml
-```
-
-### Jobs
-
-## Lint Job
-
-Runs:
-- Ruff
-- MyPy
-
-Commands:
-
-```bash
-ruff check backend/
-mypy backend/ --ignore-missing-imports
-```
+### Redis
+- Railway Redis service configured
+- Redis URL connected through environment variables
 
 ---
 
-## Test Job
+## Environment Variables
 
-Runs:
-- Pytest
-- Coverage reporting
+Configured variables include:
 
-Services:
-- PostgreSQL
-- Redis
-
-Command:
-
-```bash
-pytest tests/unit/ -v --cov=backend --cov-report=xml
+```env
+POSTGRES_URL=<Railway Postgres Reference>
+DATABASE_URL=<Railway Postgres Reference>
+REDIS_URL=<Railway Redis Reference>
+MLFLOW_URL=http://localhost:5000
 ```
+
+Additional application-specific variables were configured as required.
 
 ---
 
-## Security Job
+## Docker Configuration
 
-Runs:
-- detect-secrets
-- pip-audit
+Deployment uses:
 
-Purpose:
-- dependency vulnerability scanning
-- secret detection
-
----
-
-# Build Workflow
-
-File:
-
-```bash
-.github/workflows/build.yml
+```dockerfile
+backend/Dockerfile
 ```
 
-Features:
-- Docker Buildx
-- GHCR authentication
-- Docker image builds
-- image validation
+Dependencies are installed through:
 
----
-
-# Quality Gate Workflow
-
-File:
-
-```bash
-.github/workflows/quality-gate.yml
-```
-
-Runs nightly at:
 ```text
-2 AM
+requirements-docker.txt
 ```
 
-Checks:
-- Retrieval benchmark quality
-- MRR threshold validation
+Key fixes included:
 
-Fails pipeline if:
+- Added asyncpg
+- Added redis
+- Added prometheus-client
+- Added python-multipart
+- Added sse-starlette
+- Added pydantic-settings
+- Added python-jose
+
+---
+
+## Issues Encountered
+
+### Dependency Errors
+
+Resolved:
+
 ```text
-MRR < 0.55
+ModuleNotFoundError: asyncpg
+ModuleNotFoundError: redis
+ModuleNotFoundError: prometheus_client
+ModuleNotFoundError: python_multipart
+ModuleNotFoundError: sse_starlette
+ModuleNotFoundError: pydantic_settings
+ModuleNotFoundError: jose
 ```
 
----
+### Import Path Issues
 
-# Ruff Configuration
+Resolved incorrect imports:
 
-Defined in:
-
-```bash
-pyproject.toml
+```python
+from backend.api...
 ```
 
-Features:
-- Python 3.11 support
-- strict linting
-- async checks
-- naming validation
+Updated to:
 
----
-
-# MyPy Configuration
-
-Strict type checking enabled.
-
-```toml
-strict = true
+```python
+from api...
 ```
 
----
+### Missing Modules
 
-# Unit Tests
+Some modules referenced non-existent packages:
 
-Implemented inside:
-
-```bash
-tests/unit/
+```python
+pipelines.*
 ```
 
-### Test Files
+Affected routers were temporarily disabled to allow application startup.
 
-| File | Purpose |
-|---|---|
-| test_chunker.py | Chunking validation |
-| test_fusion.py | RRF logic tests |
-| test_circuit_breaker.py | State transitions |
-| test_prompt_injection.py | Injection detection |
-| test_pipeline_config.py | Config validation |
+### Configuration Issues
 
-Minimum:
+Resolved:
+
 ```text
-5 tests per file
+POSTGRES_URL missing
+MLFLOW_URL missing
+Invalid PostgreSQL DSN
 ```
 
 ---
 
-# Running Locally
+## Verification
 
-## Run Ruff
+### Deployment Status
 
-```bash
-ruff check backend/
-```
-
----
-
-
-## Run MyPy
-
-```bash
-mypy backend/ --ignore-missing-imports
-```
-
----
-
-## Run Unit Tests
-
-```bash
-pytest tests/unit/ -v
-```
-
----
-
-# GitHub Actions Verification
-
-Open:
 ```text
-GitHub Repository → Actions Tab
+ACTIVE
 ```
 
-Verify:
-- CI passes
-- Build passes
-- Security checks pass
+### Application Server
+
+```text
+Uvicorn running on port 8000
+Application startup complete
+```
+
+### Public Domain
+
+```text
+https://neuroflow-hidevs-production.up.railway.app
+```
 
 ---
 
-# Final Outcome
+## Deliverables
 
-NeuroFlow now includes:
-- automated CI/CD
-- linting and type validation
-- automated security scanning
-- Docker build automation
-- nightly quality gates
-- reliable unit testing pipeline
+- Railway deployment configured
+- Docker deployment operational
+- PostgreSQL integrated
+- Redis integrated
+- Environment variables configured
+- Backend service successfully deployed
+- Health endpoint configured
 
-This ensures every push is validated automatically before deployment.
-=======
-# trigger actions
+---
 
+## Repository
+
+Branch:
+
+```text
+task-17
+```
+
+Repository:
+
+```text
+Mehak-2005/NeuroFlow-HiDevs
+```
+
+---
+
+## Author
+
+Mehak
