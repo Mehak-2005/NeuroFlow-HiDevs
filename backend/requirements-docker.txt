@@ -8,3 +8,4 @@ redis
 prometheus-client
 python-multipart
 sse-starlette
+pydantic-settings
