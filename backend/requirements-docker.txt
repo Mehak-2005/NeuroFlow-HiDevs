@@ -4,3 +4,4 @@ pydantic
 httpx
 pytest
 asyncpg==0.31.0
+redis
