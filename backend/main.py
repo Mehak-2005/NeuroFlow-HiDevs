@@ -13,17 +13,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from prometheus_client import generate_latest
 from starlette.middleware.base import BaseHTTPMiddleware
-from backend.api.compare import router
-from backend.api.compare import router as compare_router
-from backend.api.finetune import router as finetune_router
-from backend.api.ingest import router as ingest_router
-from backend.api.pipelines import router as pipeline_router
-from backend.api.query import router as query_router
-from backend.api.stream import router as stream_router
-from backend.config import settings # make sure config.py exists
+from api.compare import router as compare_router
+from api.finetune import router as finetune_router
+from api.ingest import router as ingest_router
+from api.pipelines import router as pipeline_router
+from api.query import router as query_router
+from api.stream import router as stream_router
+from config import settings
 
 # ---------------- NEW METRICS IMPORT ---------------- #
-from backend.monitoring.metrics import (
+from monitoring.metrics import (
     active_circuit_breakers_open,
     eval_faithfulness,
     eval_overall,
@@ -33,7 +32,7 @@ from backend.monitoring.metrics import (
     queue_depth,
     retrieval_latency,
 )
-from backend.security.auth import FAKE_CLIENTS, create_access_token
+from security.auth import FAKE_CLIENTS, create_access_token
 
 # ---------------- APP INIT ---------------- #
 
