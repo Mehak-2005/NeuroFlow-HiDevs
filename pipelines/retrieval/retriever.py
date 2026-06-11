@@ -24,7 +24,7 @@ class Retriever:
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-    async def retrieve(self, query: str, top_k: int = 3) -> List[dict]:
+    async def retrieve(self, query: str, top_k: int = 5) -> List[dict]:
         query_embedding = self._embed(query)
 
         scores = []
